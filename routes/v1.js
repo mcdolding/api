@@ -120,6 +120,18 @@ function addRoutes(app, peliasConfig) {
     )
   );
 
+  // MCD Added to allow searching on "number" and "postcode" when no street
+  const postcodeSearchWithIdsShouldExecute = all(
+      not(predicates.hasRequestErrors),
+      // don't search-with-ids if there's a query or category
+      not(predicates.hasParsedTextProperties.any('query', 'category')),
+      // at least one layer allowed by the query params must be related to addresses
+      predicates.isRequestLayersAnyAddressRelated,
+      // there must be a street
+      predicates.hasParsedTextProperties.any('postalcode'),
+      not(predicates.hasParsedTextProperties.any('street'))
+  );
+
   const searchWithIdsShouldExecute = all(
     not(predicates.hasRequestErrors),
     // don't search-with-ids if there's a query or category
@@ -218,6 +230,8 @@ function addRoutes(app, peliasConfig) {
       controllers.libpostal(libpostalService, libpostalShouldExecute),
       controllers.placeholder(placeholderService, geometricFiltersApply, placeholderGeodisambiguationShouldExecute),
       controllers.placeholder(placeholderService, geometricFiltersApply, placeholderIdsLookupShouldExecute),
+      // MCD Additional search defined to target housenumber and postcode
+      controllers.search(peliasConfig, esclient, queries.postcode_search_using_ids, postcodeSearchWithIdsShouldExecute),
       // try 3 different query types: address search using ids, cascading fallback, pelias parser
       controllers.search(peliasConfig, esclient, queries.address_search_using_ids, searchWithIdsShouldExecute),
       controllers.search(peliasConfig, esclient, queries.search, fallbackQueryShouldExecute),
